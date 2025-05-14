@@ -1,0 +1,143 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "TABLE METADATA"
+        - "Database Query"
+      parameters:
+        componentName: "Start"
+    Database Query:
+      type: "database-query"
+      parameters:
+        componentName: "Database Query"
+        basicAdvancedMode: "Advanced"
+        databaseType: "Snowflake"
+        connectionUrl: "jdbc:snowflake://nzefhhx-lg42617.snowflakecomputing.com"
+        username: "black045"
+        password: "SNOWFLAKE-BLACK-PWD"
+        connectionOptions:
+        sqlQuery: "select * from pc_matillionloader_db.incremental_load.\"customers\"\
+          \ ;"
+        fetchSize:
+        type: "Standard"
+        primaryKeys:
+        warehouse1: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "INCREMENTAL_LOAD"
+        targetTable: "customers"
+        stage1: "[Custom]"
+        stagePlatform: "Snowflake Managed"
+        loadOptions:
+        sshTunnel:
+      postProcessing:
+        updateScalarVariables:
+    TABLE METADATA:
+      type: "database-query"
+      transitions:
+        success:
+        - "Query Result To Grid"
+      parameters:
+        componentName: "TABLE METADATA"
+        basicAdvancedMode: "Advanced"
+        databaseType: "Snowflake"
+        connectionUrl: "jdbc:snowflake://nzefhhx-lg42617.snowflakecomputing.com"
+        username: "black045"
+        password: "SNOWFLAKE-BLACK-PWD"
+        connectionOptions:
+        sqlQuery: "select * from snowflake_sample_data.information_schema.tables where\
+          \ table_schema = 'TPCH_SF1'"
+        fetchSize:
+        type: "Standard"
+        primaryKeys:
+        warehouse1: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "INCREMENTAL_LOAD"
+        targetTable: "customers"
+        stage1: "[Custom]"
+        stagePlatform: "Snowflake Managed"
+        loadOptions:
+        sshTunnel:
+      postProcessing:
+        updateScalarVariables:
+    Print Variables:
+      type: "print-variables"
+      parameters:
+        componentName: "Print Variables"
+        variablesToPrint:
+        - - "GRID_VAR"
+        prefixText:
+        includeVariableName: "No"
+      postProcessing:
+        updateScalarVariables:
+    Query Result To Grid:
+      type: "query-to-grid"
+      transitions:
+        success:
+        - "Print Variables"
+      parameters:
+        componentName: "Query Result To Grid"
+        mode: "Advanced"
+        gridVariable: "GRID_VAR"
+        gridVariableMapping:
+        - - "TABLE_NAME"
+          - "TABLE_NAME"
+        query: "select * from snowflake_sample_data.information_schema.tables where\
+          \ table_schema = 'TPCH_SF1'"
+      postProcessing:
+        updateScalarVariables:
+  variables:
+    GRID_VAR:
+      metadata:
+        type: "GRID"
+        description: ""
+        scope: "SHARED"
+        visibility: "PRIVATE"
+        columns:
+          TABLE_NAME:
+            columnType: "TEXT"
+      defaultValue: []
+design:
+  components:
+    Start:
+      position:
+        x: -850
+        "y": -110
+      tempMetlId: 1
+    Database Query:
+      position:
+        x: -520
+        "y": -160
+      tempMetlId: 2
+    TABLE METADATA:
+      position:
+        x: -700
+        "y": -80
+      tempMetlId: 3
+    Print Variables:
+      position:
+        x: -420
+        "y": -80
+      tempMetlId: 5
+    Query Result To Grid:
+      position:
+        x: -550
+        "y": -80
+      tempMetlId: 6
+  notes:
+    "1":
+      position:
+        x: -160
+        "y": -180
+      size:
+        height: 238
+        width: 820
+      theme: "white"
+      content: "shall we do like this?\n\nLoad the data using Database Query and fetch\
+        \ the last processed date and put it into blob storage and then access that\
+        \ blob data as a external table in transformation job to do merge logic.\n\
+        \n1. SCD Type - 2 Method in Datbricks blog:\nhttps://www.databricks.com/blog/2023/01/25/loading-data-warehouse-slowly-changing-dimension-type-2-using-matillion.html\n\
+        \n2.JDBC Incremental Load : \nhttps://docs.matillion.com/metl/docs/2955330/\n"

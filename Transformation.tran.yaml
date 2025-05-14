@@ -1,0 +1,89 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    customers:
+      type: "table-input"
+      parameters:
+        componentName: "customers"
+        database: "[Environment Default]"
+        schema: "INCREMENTAL_LOAD"
+        targetTable: "customers"
+        columnNames:
+        - "rid"
+        - "first_name"
+        - "last_name"
+        - "ts"
+        timeOffset:
+    Detect Changes:
+      type: "detect-changes"
+      sources:
+      - "customers"
+      - "customers_tgt"
+      parameters:
+        componentName: "Detect Changes"
+        masterTable: "customers_tgt"
+        matchKeys:
+        - "rid"
+        compareColumns:
+        - "rid"
+        - "first_name"
+        - "last_name"
+        - "ts"
+        outputColumnMapping:
+        - - "master_first_name"
+          - "master_first_name"
+        - - "compare_first_name"
+          - "compare_first_name"
+        - - "master_last_name"
+          - "master_last_name"
+        - - "compare_last_name"
+          - "compare_last_name"
+        indicatorColumn: "Indicator"
+    customers_tgt:
+      type: "table-input"
+      parameters:
+        componentName: "customers_tgt"
+        database: "[Environment Default]"
+        schema: "INCREMENTAL_LOAD"
+        targetTable: "customers_tgt"
+        columnNames:
+        - "rid"
+        - "first_name"
+        - "last_name"
+        - "ts"
+        timeOffset:
+    Filter:
+      type: "filter"
+      sources:
+      - "Detect Changes"
+      parameters:
+        componentName: "Filter"
+        filterConditions:
+        - - "Indicator"
+          - "Not"
+          - "Equal to"
+          - "N"
+        combineCondition: "And"
+design:
+  components:
+    customers:
+      position:
+        x: -270
+        "y": 150
+      tempMetlId: 1
+    Detect Changes:
+      position:
+        x: -80
+        "y": 120
+      tempMetlId: 2
+    customers_tgt:
+      position:
+        x: -270
+        "y": 40
+      tempMetlId: 3
+    Filter:
+      position:
+        x: 80
+        "y": 120
+      tempMetlId: 4

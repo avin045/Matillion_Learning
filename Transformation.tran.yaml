@@ -10,10 +10,15 @@ pipeline:
         schema: "INCREMENTAL_LOAD"
         targetTable: "customers"
         columnNames:
-        - "rid"
-        - "first_name"
-        - "last_name"
-        - "ts"
+        - "C_CUSTKEY"
+        - "C_NAME"
+        - "C_ADDRESS"
+        - "C_NATIONKEY"
+        - "C_PHONE"
+        - "C_ACCTBAL"
+        - "C_MKTSEGMENT"
+        - "C_COMMENT"
+        - "TS"
         timeOffset:
     Detect Changes:
       type: "detect-changes"
@@ -24,21 +29,54 @@ pipeline:
         componentName: "Detect Changes"
         masterTable: "customers_tgt"
         matchKeys:
-        - "rid"
+        - "C_CUSTKEY"
         compareColumns:
-        - "rid"
-        - "first_name"
-        - "last_name"
-        - "ts"
+        - "C_CUSTKEY"
+        - "C_NAME"
+        - "C_ADDRESS"
+        - "C_NATIONKEY"
+        - "C_PHONE"
+        - "C_ACCTBAL"
+        - "C_MKTSEGMENT"
+        - "C_COMMENT"
+        - "TS"
         outputColumnMapping:
-        - - "master_first_name"
-          - "master_first_name"
-        - - "compare_first_name"
-          - "compare_first_name"
-        - - "master_last_name"
-          - "master_last_name"
-        - - "compare_last_name"
-          - "compare_last_name"
+        - - "master_C_CUSTKEY"
+          - "master_C_CUSTKEY"
+        - - "compare_C_CUSTKEY"
+          - "compare_C_CUSTKEY"
+        - - "master_C_NAME"
+          - "master_C_NAME"
+        - - "compare_C_NAME"
+          - "compare_C_NAME"
+        - - "master_C_ADDRESS"
+          - "master_C_ADDRESS"
+        - - "compare_C_ADDRESS"
+          - "compare_C_ADDRESS"
+        - - "master_C_NATIONKEY"
+          - "master_C_NATIONKEY"
+        - - "compare_C_NATIONKEY"
+          - "compare_C_NATIONKEY"
+        - - "master_C_PHONE"
+          - "master_C_PHONE"
+        - - "compare_C_PHONE"
+          - "compare_C_PHONE"
+        - - "master_C_ACCTBAL"
+          - "master_C_ACCTBAL"
+        - - "compare_C_ACCTBAL"
+          - "compare_C_ACCTBAL"
+        - - "master_C_MKTSEGMENT"
+          - "master_C_MKTSEGMENT"
+        - - "compare_C_MKTSEGMENT"
+          - "compare_C_MKTSEGMENT"
+        - - "master_C_COMMENT"
+          - "master_C_COMMENT"
+        - - "compare_C_COMMENT"
+          - "compare_C_COMMENT"
+        - - "master_TS"
+          - "master_TS"
+        - - "compare_TS"
+          - "compare_TS"
         indicatorColumn: "Indicator"
     customers_tgt:
       type: "table-input"
@@ -48,23 +86,140 @@ pipeline:
         schema: "INCREMENTAL_LOAD"
         targetTable: "customers_tgt"
         columnNames:
-        - "rid"
-        - "first_name"
-        - "last_name"
-        - "ts"
+        - "C_CUSTKEY"
+        - "C_NAME"
+        - "C_ADDRESS"
+        - "C_NATIONKEY"
+        - "C_PHONE"
+        - "C_ACCTBAL"
+        - "C_MKTSEGMENT"
+        - "C_COMMENT"
+        - "TS"
         timeOffset:
-    Filter:
+    Filter - N:
       type: "filter"
       sources:
       - "Detect Changes"
       parameters:
-        componentName: "Filter"
+        componentName: "Filter - N"
         filterConditions:
         - - "Indicator"
-          - "Not"
+          - "Is"
           - "Equal to"
           - "N"
         combineCondition: "And"
+    customers_tgt APPEND:
+      type: "table-output"
+      sources:
+      - "Filter - N"
+      parameters:
+        componentName: "customers_tgt APPEND"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "INCREMENTAL_LOAD"
+        targetTable: "customers_tgt"
+        fixDataTypeMismatches: "Yes"
+        columnMapping:
+        - - "compare_C_CUSTKEY"
+          - "C_CUSTKEY"
+        - - "compare_C_NAME"
+          - "C_NAME"
+        - - "compare_C_ADDRESS"
+          - "C_ADDRESS"
+        - - "compare_C_NATIONKEY"
+          - "C_NATIONKEY"
+        - - "compare_C_PHONE"
+          - "C_PHONE"
+        - - "compare_C_ACCTBAL"
+          - "C_ACCTBAL"
+        - - "compare_C_MKTSEGMENT"
+          - "C_MKTSEGMENT"
+        - - "compare_C_COMMENT"
+          - "C_COMMENT"
+        - - "compare_TS"
+          - "TS"
+        orderBy:
+        outputMode: "Append"
+      postProcessing:
+        updateScalarVariables:
+        - - "COMPONENT_ERROR"
+          - "${sysvar.thisComponent.message}"
+    Filter - C:
+      type: "filter"
+      sources:
+      - "Detect Changes"
+      parameters:
+        componentName: "Filter - C"
+        filterConditions:
+        - - "Indicator"
+          - "Is"
+          - "Equal to"
+          - "C"
+        combineCondition: "And"
+    customer tgt UPDATE:
+      type: "table-update"
+      sources:
+      - "Filter - C"
+      parameters:
+        componentName: "customer tgt UPDATE"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "INCREMENTAL_LOAD"
+        targetTable: "customers_tgt"
+        targetAlias: "target"
+        sourceAlias: "input"
+        joinExpression:
+        - - "\"target\".\"C_CUSTKEY\"=\"input\".\"C_CUSTKEY\""
+          - "Case"
+        whenMatched:
+        - - "\"input\".\"Indicator\"='UPDATE'"
+          - "Update"
+        updateMapping:
+        - - "compare_C_CUSTKEY"
+          - "C_CUSTKEY"
+        - - "compare_C_NAME"
+          - "C_NAME"
+        - - "compare_C_ADDRESS"
+          - "C_ADDRESS"
+        - - "compare_C_NATIONKEY"
+          - "C_NATIONKEY"
+        - - "compare_C_PHONE"
+          - "C_PHONE"
+        - - "compare_C_ACCTBAL"
+          - "C_ACCTBAL"
+        - - "compare_C_MKTSEGMENT"
+          - "C_MKTSEGMENT"
+        - - "compare_C_COMMENT"
+          - "C_COMMENT"
+        - - "compare_TS"
+          - "TS"
+        includeNotMatched: "No"
+      postProcessing:
+        updateScalarVariables:
+        - - "COMPONENT_ERROR"
+          - "${sysvar.thisComponent.message}"
+  variables:
+    COMPONENT_ERROR:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: ""
+    COMPONENT_STATUS:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: ""
+    COMPONENT_NAME:
+      metadata:
+        type: "TEXT"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+      defaultValue: ""
 design:
   components:
     customers:
@@ -82,8 +237,23 @@ design:
         x: -270
         "y": 40
       tempMetlId: 3
-    Filter:
+    Filter - N:
       position:
         x: 80
-        "y": 120
+        "y": 70
       tempMetlId: 4
+    customers_tgt APPEND:
+      position:
+        x: 280
+        "y": 70
+      tempMetlId: 5
+    Filter - C:
+      position:
+        x: 80
+        "y": 200
+      tempMetlId: 6
+    customer tgt UPDATE:
+      position:
+        x: 280
+        "y": 200
+      tempMetlId: 7

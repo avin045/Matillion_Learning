@@ -200,12 +200,12 @@ design:
     Retry:
       position:
         x: 680
-        "y": -30
+        "y": -20
       tempMetlId: 4
     SQL Script:
       position:
         x: 680
-        "y": -30
+        "y": -20
       tempMetlId: 5
     Query Result To Scalar:
       position:
